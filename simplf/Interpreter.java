@@ -76,7 +76,8 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
 
     @Override
     public Object visitForStmt(For stmt) {
-        throw new UnsupportedOperationException("For loops are not interpreted.");
+        //throw new UnsupportedOperationException("For loops are not interpreted.");
+        return null;
     }
 
    @Override
