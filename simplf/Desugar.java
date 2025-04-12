@@ -24,6 +24,7 @@ import simplf.Stmt.While;
 public class Desugar implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt> {
 
     public Desugar() {}
+    
 
     public List<Stmt> desugar(List<Stmt> stmts) {
         ArrayList<Stmt> ret = new ArrayList<>();
