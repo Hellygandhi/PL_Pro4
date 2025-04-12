@@ -9,6 +9,7 @@ public class AssocList {
             name = nameIn;
             value = valueIn;
             next = nextIn;
+                
         }
     
 }
