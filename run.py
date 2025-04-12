@@ -11,3 +11,4 @@ if __name__ == "__main__":
     
     name = args.filename;
     subprocess.run(['java', '-cp', 'bin:antlr-4.13.2-complete.jar', 'simplf.Simplf', name])
+    
