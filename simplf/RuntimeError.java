@@ -1,3 +1,4 @@
+
 package simplf; 
 
 class RuntimeError extends RuntimeException {
