@@ -15,6 +15,7 @@ declaration returns [Stmt val]: funDecl      {$val = $funDecl.val;}
                              |  varDecl      {$val = $varDecl.val;}
                              |  statement    {$val = $statement.val;};
 
+
 funDecl returns [Stmt val]: 
       FUN id LEFT_PAREN RIGHT_PAREN block           {$val = new Stmt.Function($id.val, new ArrayList<>(), $block.val);}
     | FUN id LEFT_PAREN params RIGHT_PAREN block    {$val = new Stmt.Function($id.val, $params.val, $block.val);};
