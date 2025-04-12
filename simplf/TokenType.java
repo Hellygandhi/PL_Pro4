@@ -11,6 +11,7 @@ public enum TokenType {
     LESS, LESS_EQUAL,
 
     // Boolean
+    
     AND, OR,
 
     // Literals
