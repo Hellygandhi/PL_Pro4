@@ -16,6 +16,7 @@ class Environment {
 
     Environment(AssocList assocList, Environment enclosing) {
         this.values = assocList;
+        
         this.enclosing = enclosing;
     }
 
