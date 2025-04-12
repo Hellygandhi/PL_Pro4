@@ -1,4 +1,3 @@
-
 package simplf;
 
 class Environment {
