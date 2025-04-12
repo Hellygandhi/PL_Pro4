@@ -1,3 +1,4 @@
+
 package simplf; 
 
 public enum TokenType {
