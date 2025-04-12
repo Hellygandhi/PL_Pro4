@@ -15,21 +15,40 @@ class SimplfFunction implements SimplfCallable {
         this.closure = environment;
     }
 
-    @Override
     public Object call(Interpreter interpreter, List<Object> args) {
-        Environment env = new Environment(closure);
+        if (args.size() != declaration.params.size()) {
+            throw new RuntimeError(null, "Expected " + declaration.params.size() + " arguments but got " + args.size() + ".");
+        }
+    
+        Environment environment = new Environment(this.closure);
+        environment = environment.define(declaration.name, declaration.name.lexeme, this);
+    
         for (int i = 0; i < declaration.params.size(); i++) {
-            env = env.define(declaration.params.get(i), declaration.params.get(i).lexeme, args.get(i));
+            Object arg = args.get(i);
+            if (arg instanceof Number) {
+                arg = ((Number)arg).doubleValue();
+            }
+            environment = environment.define(
+                declaration.params.get(i),
+                declaration.params.get(i).lexeme,
+                arg
+            );
         }
-
-        Object result = null;
-        for (Stmt stmt : declaration.body) {
-            result = interpreter.execute(stmt);
+    
+        List<Stmt> stmts = declaration.body;
+        for (int i = 0; i < stmts.size(); i++) {
+            Stmt stmt = stmts.get(i);
+            if (i == stmts.size() - 1 && stmt instanceof Stmt.Expression) {
+                Object value = interpreter.evaluate(((Stmt.Expression) stmt).expr);
+                return value;
+            } else {
+                interpreter.execute(stmt);
+            }
         }
-
-        return result;
+    
+        return null;
     }
-
+    
     @Override
     public String toString() {
         return "<fn " + declaration.name.lexeme + ">";
