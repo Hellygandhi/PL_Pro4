@@ -1,6 +1,7 @@
-package simplf; 
+package simplf;
 
 import java.util.List;
+
 import simplf.Stmt.For;
 
 class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
@@ -44,14 +45,14 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
 
     @Override
     public Object visitBlockStmt(Stmt.Block stmt) {
-        Environment previous = this.environment;
+        Environment previous = environment;
+        environment = new Environment(previous);
         try {
-            this.environment = new Environment(previous);
             for (Stmt s : stmt.statements) {
                 execute(s);
             }
         } finally {
-            this.environment = previous;
+            environment = previous;
         }
         return null;
     }
@@ -59,13 +60,13 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
     @Override
     public Object visitIfStmt(Stmt.If stmt) {
         if (isTruthy(evaluate(stmt.cond))) {
-            execute(stmt.thenBranch);
+            return execute(stmt.thenBranch);
         } else if (stmt.elseBranch != null) {
-            execute(stmt.elseBranch);
+            return execute(stmt.elseBranch);
         }
         return null;
     }
-    
+
     @Override
     public Object visitWhileStmt(Stmt.While stmt) {
         while (isTruthy(evaluate(stmt.cond))) {
@@ -76,26 +77,31 @@ class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
 
     @Override
     public Object visitForStmt(For stmt) {
-        //throw new UnsupportedOperationException("For loops are not interpreted.");
-        return null;
+        throw new UnsupportedOperationException("For loops are not interpreted.");
     }
 
-   @Override
-public Object visitFunctionStmt(Stmt.Function stmt) {
-    SimplfFunction function = new SimplfFunction(stmt, environment);
-    environment = environment.define(stmt.name, stmt.name.lexeme, function);
-    return null;
-}
+    @Override
+    public Object visitFunctionStmt(Stmt.Function stmt) {
+        // Step 1: Define a placeholder (null value)
+        environment = environment.define(stmt.name, stmt.name.lexeme, null);
+    
+        // Step 2: Capture closure that includes the placeholder
+        SimplfFunction function = new SimplfFunction(stmt, environment);
+    
+        // Step 3: Assign actual function object back into the placeholder
+        environment.assign(stmt.name, function);
+    
+        return null;
+    }
+    
 
     @Override
     public Object visitLogicalExpr(Expr.Logical expr) {
         Object left = evaluate(expr.left);
         if (expr.op.type == TokenType.OR) {
-            if (isTruthy(left))
-                return left;
+            if (isTruthy(left)) return left;
         } else {
-            if (!isTruthy(left))
-                return left;
+            if (!isTruthy(left)) return left;
         }
         return evaluate(expr.right);
     }
@@ -181,30 +187,27 @@ public Object visitFunctionStmt(Stmt.Function stmt) {
     }
 
     @Override
-public Object visitCallExpr(Expr.Call expr) {
-    Object callee = evaluate(expr.callee);
+    public Object visitCallExpr(Expr.Call expr) {
+        Object callee = evaluate(expr.callee);
+        List<Object> arguments = new java.util.ArrayList<>();
+        for (Expr argument : expr.args) {
+            arguments.add(evaluate(argument));
+        }
 
-    List<Object> arguments = new java.util.ArrayList<>();
-    for (Expr argument : expr.args) {
-        arguments.add(evaluate(argument));
-    }
+        if (!(callee instanceof SimplfCallable)) {
+            throw new RuntimeError(expr.paren, "Can only call functions.");
+        }
 
-    if (!(callee instanceof SimplfCallable)) {
-        throw new RuntimeError(expr.paren, "Can only call functions.");
-    }
+        SimplfCallable function = (SimplfCallable) callee;
+        if (function instanceof SimplfFunction) {
+            SimplfFunction func = (SimplfFunction) function;
+            if (arguments.size() != func.arity()) {
+                throw new RuntimeError(expr.paren,
+                        "Expected " + func.arity() + " arguments but got " + arguments.size() + ".");
+            }
+        }
 
-    SimplfCallable function = (SimplfCallable) callee;
-
-    if (arguments.size() != function.arity()) {
-        throw new RuntimeError(expr.paren,
-            "Expected " + function.arity() + " arguments but got " + arguments.size() + ".");
-    }
-
-    return function.call(this, arguments);
-}
-
-    private Object evaluate(Expr expr) {
-        return expr.accept(this);
+        return function.call(this, arguments);
     }
 
     @Override
@@ -223,41 +226,58 @@ public Object visitCallExpr(Expr.Call expr) {
         }
     }
 
-    protected Object execute(Stmt stmt) {
+    // ✅ Now public — for SimplfFunction use
+    public Object evaluate(Expr expr) {
+        return expr.accept(this);
+    }
+
+    public void executeInEnv(Stmt stmt, Environment env) {
+        Environment previous = this.environment;
+        try {
+            this.environment = env;
+            stmt.accept(this);
+        } finally {
+            this.environment = previous;
+        }
+    }
+
+    public Object evaluateInEnv(Expr expr, Environment env) {
+        Environment previous = this.environment;
+        try {
+            this.environment = env;
+            return expr.accept(this);
+        } finally {
+            this.environment = previous;
+        }
+    }
+
+    private Object execute(Stmt stmt) {
         return stmt.accept(this);
     }
 
     private boolean isTruthy(Object object) {
-        if (object == null) {
-            return false;
-        }
-        if (object instanceof Boolean) {
-            return (boolean) object;
-        }
+        if (object == null) return false;
+        if (object instanceof Boolean) return (boolean) object;
         return true;
     }
 
     private boolean isEqual(Object a, Object b) {
-        if (a == null)
-            return b == null;
+        if (a == null) return b == null;
         return a.equals(b);
     }
 
     private void checkNumber(Token op, Object object) {
-        if (object instanceof Double)
-            return;
+        if (object instanceof Double) return;
         throw new RuntimeError(op, "Operand must be a number");
     }
 
     private void checkNumbers(Token op, Object a, Object b) {
-        if (a instanceof Double && b instanceof Double)
-            return;
+        if (a instanceof Double && b instanceof Double) return;
         throw new RuntimeError(op, "Operand must be numbers");
     }
 
     private String stringify(Object object) {
-        if (object == null)
-            return "nil";
+        if (object == null) return "nil";
         if (object instanceof Double) {
             String num = object.toString();
             if (num.endsWith(".0")) {

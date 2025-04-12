@@ -23,8 +23,9 @@ import simplf.Stmt.While;
 
 public class Desugar implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt> {
 
-    public Desugar() {}
-    
+    public Desugar() {
+
+    }
 
     public List<Stmt> desugar(List<Stmt> stmts) {
         ArrayList<Stmt> ret = new ArrayList<>();
@@ -68,40 +69,35 @@ public class Desugar implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt> {
         }
 
         return new If(stmt.cond.accept(this),
-            stmt.thenBranch.accept(this),
-            new_else);
+                stmt.thenBranch.accept(this),
+                new_else);
     }
 
     @Override
     public Stmt visitWhileStmt(While stmt) {
         return new While(stmt.cond.accept(this),
-            stmt.body.accept(this));
+                stmt.body.accept(this));
     }
 
     @Override
-    public Stmt visitForStmt(Stmt.For stmt) {
-        Stmt init = stmt.init == null ? null : new Stmt.Expression(stmt.init.accept(this));
-        Expr cond = stmt.cond == null ? new Expr.Literal(true) : stmt.cond.accept(this);
-        Stmt update = stmt.incr == null ? null : new Stmt.Expression(stmt.incr.accept(this));
-        Stmt body = stmt.body.accept(this);
-    
-        if (update != null) {
-            List<Stmt> bodyStmts = new ArrayList<>();
-            bodyStmts.add(body);
-            bodyStmts.add(update);
-            body = new Stmt.Block(bodyStmts);
+    public Stmt visitForStmt(For stmt) {
+        Stmt initStmt = new Var(new Token(TokenType.IDENTIFIER, "__for_init", null, 0, 0), null);
+        if (stmt.init != null) {
+            initStmt = new Stmt.Expression(stmt.init);
         }
-    
-        Stmt whileLoop = new Stmt.While(cond, body);
-    
-        if (init != null) {
-            List<Stmt> blockStmts = new ArrayList<>();
-            blockStmts.add(init);
-            blockStmts.add(whileLoop);
-            return new Stmt.Block(blockStmts);
+
+        Expr condition = stmt.cond != null ? stmt.cond : new Expr.Literal(true);
+
+        Stmt body = stmt.body;
+        if (stmt.incr != null) {
+            body = new Block(List.of(
+                    stmt.body,
+                    new Stmt.Expression(stmt.incr)));
         }
-    
-        return whileLoop;
+
+        Stmt loop = new While(condition, body);
+
+        return new Block(List.of(initStmt, loop));
     }
 
     @Override
@@ -151,9 +147,9 @@ public class Desugar implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt> {
 
     @Override
     public Expr visitConditionalExpr(Conditional expr) {
-        return new Conditional(expr.cond.accept(this), 
-            expr.thenBranch.accept(this),
-            expr.elseBranch.accept(this));
+        return new Conditional(expr.cond.accept(this),
+                expr.thenBranch.accept(this),
+                expr.elseBranch.accept(this));
     }
 
     @Override
