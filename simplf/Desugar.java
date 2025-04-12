@@ -1,4 +1,3 @@
-
 package simplf;
 
 import java.util.ArrayList;
